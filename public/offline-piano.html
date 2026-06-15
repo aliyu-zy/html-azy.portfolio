@@ -451,7 +451,7 @@
         <div id="piano" class="piano" aria-label="Playable piano keyboard"></div>
       </div>
       <div class="help-grid">
-        <p><strong>Computer keys:</strong> A W S E D F T G Y H U J K O L play from C4 to C6.</p>
+        <p><strong>Computer keys:</strong> A W S E D F T G Y H U J K O L ; ' Z X C V B N M , play C4 through C6.</p>
         <p><strong>Recording:</strong> press Start recording, play notes, then Stop recording. Your takes become editable note rows.</p>
         <p><strong>Offline:</strong> all sounds are generated with the browser Web Audio API. Saved projects stay in this browser.</p>
       </div>
@@ -1023,7 +1023,7 @@
 
       if (data.settings) {
         waveformInput.value = data.settings.waveform || waveformInput.value;
-        volumeInput.value = Math.round((data.settings.volume || 0.7) * 100);
+        volumeInput.value = Math.round((data.settings.volume ?? 0.7) * 100);
         attackInput.value = data.settings.attack ?? attackInput.value;
         releaseInput.value = data.settings.release ?? releaseInput.value;
         tempoInput.value = data.settings.tempo || tempoInput.value;
