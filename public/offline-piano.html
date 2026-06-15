@@ -1,0 +1,1267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Offline Piano Composer</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #10131a;
+      --panel: #181d27;
+      --panel-2: #202838;
+      --text: #f6f8ff;
+      --muted: #aab4c6;
+      --accent: #77d4ff;
+      --accent-2: #a58bff;
+      --danger: #ff7d86;
+      --good: #75e0a7;
+      --key-white: #fffaf2;
+      --key-white-active: #bdeaff;
+      --key-black: #151922;
+      --key-black-active: #6e5bff;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(119, 212, 255, 0.22), transparent 32rem),
+        radial-gradient(circle at top right, rgba(165, 139, 255, 0.22), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+    }
+
+    a {
+      color: var(--accent);
+    }
+
+    .app {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    header {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      font-size: 0.78rem;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 7vw, 4.4rem);
+      line-height: 0.95;
+    }
+
+    .intro {
+      max-width: 760px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.6;
+    }
+
+    .layout {
+      display: grid;
+      gap: 18px;
+    }
+
+    .panel {
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 24px;
+      background: rgba(24, 29, 39, 0.88);
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.32);
+      padding: 20px;
+      backdrop-filter: blur(14px);
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.25rem;
+    }
+
+    .controls {
+      display: grid;
+      gap: 14px;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      align-items: end;
+    }
+
+    label {
+      display: grid;
+      gap: 7px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    input,
+    select,
+    button,
+    textarea {
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 12px;
+      background: var(--panel-2);
+      color: var(--text);
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      padding: 10px 12px;
+    }
+
+    input[type="range"] {
+      padding: 0;
+      accent-color: var(--accent);
+    }
+
+    button {
+      cursor: pointer;
+      min-height: 42px;
+      padding: 10px 14px;
+      font-weight: 700;
+      transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(119, 212, 255, 0.72);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.48;
+      transform: none;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      color: #09101b;
+      border: 0;
+    }
+
+    .recording {
+      background: rgba(255, 125, 134, 0.16);
+      border-color: rgba(255, 125, 134, 0.72);
+      color: #ffd7da;
+    }
+
+    .success {
+      background: rgba(117, 224, 167, 0.14);
+      border-color: rgba(117, 224, 167, 0.52);
+      color: #d9ffe9;
+    }
+
+    .danger {
+      background: rgba(255, 125, 134, 0.14);
+      border-color: rgba(255, 125, 134, 0.52);
+      color: #ffd7da;
+    }
+
+    .status-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      padding: 8px 12px;
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+
+    .dot.live {
+      background: var(--danger);
+      box-shadow: 0 0 0 8px rgba(255, 125, 134, 0.12);
+    }
+
+    .piano-shell {
+      overflow-x: auto;
+      padding: 18px 10px 8px;
+    }
+
+    .piano {
+      position: relative;
+      width: 980px;
+      max-width: 100%;
+      height: 270px;
+      margin: 0 auto;
+      user-select: none;
+    }
+
+    .white-keys {
+      display: grid;
+      grid-template-columns: repeat(15, 1fr);
+      height: 100%;
+      gap: 4px;
+    }
+
+    .key {
+      position: relative;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      padding: 0 4px 14px;
+      border-radius: 0 0 16px 16px;
+      touch-action: none;
+    }
+
+    .white {
+      color: #172032;
+      background: linear-gradient(#fff, var(--key-white));
+      border: 1px solid #d4d7df;
+      box-shadow: inset 0 -12px 22px rgba(0, 0, 0, 0.08);
+    }
+
+    .black {
+      position: absolute;
+      top: 0;
+      z-index: 2;
+      width: 4.6%;
+      height: 62%;
+      color: #f5f7ff;
+      background: linear-gradient(#2a3243, var(--key-black));
+      border: 1px solid #06080d;
+      border-radius: 0 0 12px 12px;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, 0.45);
+      transform: translateX(-50%);
+    }
+
+    .white.active {
+      background: linear-gradient(#f8ffff, var(--key-white-active));
+    }
+
+    .black.active {
+      background: linear-gradient(#8d7cff, var(--key-black-active));
+    }
+
+    .key small {
+      display: block;
+      margin-top: 3px;
+      color: inherit;
+      opacity: 0.68;
+      font-size: 0.72rem;
+    }
+
+    .help-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 12px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .help-grid strong {
+      color: var(--text);
+    }
+
+    .editor-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 16px;
+    }
+
+    table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: collapse;
+      background: rgba(16, 19, 26, 0.56);
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      color: var(--muted);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    td input,
+    td select {
+      min-width: 88px;
+    }
+
+    .empty-state {
+      padding: 30px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .json-tools {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    textarea {
+      min-height: 92px;
+      resize: vertical;
+    }
+
+    footer {
+      margin-top: 24px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    @media (max-width: 720px) {
+      .app {
+        width: min(100% - 18px, 1180px);
+        padding-top: 18px;
+      }
+
+      .panel {
+        padding: 14px;
+        border-radius: 18px;
+      }
+
+      .piano {
+        width: 820px;
+        height: 230px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <p class="eyebrow">Offline music sketchpad</p>
+      <h1>Piano Composer</h1>
+      <p class="intro">
+        Play with your mouse, touch screen, or computer keyboard. Record note events, edit timing and pitch,
+        replay the composition, and save everything locally without internet access.
+      </p>
+    </header>
+
+    <section class="panel" aria-labelledby="sound-title">
+      <h2 id="sound-title">Sound controls</h2>
+      <div class="controls">
+        <label>
+          Wave shape
+          <select id="waveform">
+            <option value="sine">Soft sine</option>
+            <option value="triangle" selected>Warm triangle</option>
+            <option value="square">Retro square</option>
+            <option value="sawtooth">Bright saw</option>
+          </select>
+        </label>
+        <label>
+          Volume <span id="volumeValue">70%</span>
+          <input id="volume" type="range" min="0" max="100" value="70">
+        </label>
+        <label>
+          Attack <span id="attackValue">0.02s</span>
+          <input id="attack" type="range" min="0" max="0.8" step="0.01" value="0.02">
+        </label>
+        <label>
+          Release <span id="releaseValue">0.35s</span>
+          <input id="release" type="range" min="0.05" max="1.5" step="0.01" value="0.35">
+        </label>
+        <label>
+          New note length
+          <select id="defaultDuration">
+            <option value="0.25">1/16 note</option>
+            <option value="0.5">1/8 note</option>
+            <option value="1" selected>1/4 note</option>
+            <option value="2">1/2 note</option>
+            <option value="4">Whole note</option>
+          </select>
+        </label>
+        <label>
+          Tempo
+          <input id="tempo" type="number" min="40" max="220" value="100">
+        </label>
+      </div>
+      <div class="button-row">
+        <button id="recordBtn" class="recording" type="button">Start recording</button>
+        <button id="playBtn" class="primary" type="button">Play composition</button>
+        <button id="stopBtn" type="button" disabled>Stop</button>
+        <button id="addNoteBtn" class="success" type="button">Add note</button>
+        <button id="demoBtn" type="button">Load demo melody</button>
+        <button id="clearBtn" class="danger" type="button">Clear notes</button>
+      </div>
+      <div class="status-bar">
+        <span class="pill"><span id="recordDot" class="dot"></span><span id="statusText">Ready</span></span>
+        <span id="compositionSummary">0 notes</span>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="piano-title">
+      <h2 id="piano-title">Playable piano</h2>
+      <div class="piano-shell">
+        <div id="piano" class="piano" aria-label="Playable piano keyboard"></div>
+      </div>
+      <div class="help-grid">
+        <p><strong>Computer keys:</strong> A W S E D F T G Y H U J K O L ; ' Z X C V B N M , play C4 through C6.</p>
+        <p><strong>Recording:</strong> press Start recording, play notes, then Stop recording. Your takes become editable note rows.</p>
+        <p><strong>Offline:</strong> all sounds are generated with the browser Web Audio API. Saved projects stay in this browser.</p>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="editor-title">
+      <div class="editor-head">
+        <h2 id="editor-title">Edit composition</h2>
+        <div class="button-row" style="margin-top: 0;">
+          <button id="quantizeBtn" type="button">Quantize starts</button>
+          <button id="sortBtn" type="button">Sort by time</button>
+          <button id="saveBtn" class="success" type="button">Save locally</button>
+          <button id="loadBtn" type="button">Load saved</button>
+          <button id="downloadJsonBtn" type="button">Download JSON</button>
+          <button id="downloadWavBtn" type="button">Download WAV</button>
+        </div>
+      </div>
+      <div id="notesArea"></div>
+      <div class="json-tools">
+        <label>
+          Import or paste composition JSON
+          <textarea id="jsonInput" placeholder="Paste a previously exported composition here, then choose Import JSON."></textarea>
+        </label>
+        <div class="button-row" style="margin-top: 0;">
+          <button id="importJsonBtn" type="button">Import JSON</button>
+          <button id="copyJsonBtn" type="button">Copy current JSON</button>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <a href="../index.html">Back to portfolio</a>
+    </footer>
+  </main>
+
+  <script>
+    const NOTES = [
+      { name: "C4", frequency: 261.63, key: "a", type: "white" },
+      { name: "C#4", frequency: 277.18, key: "w", type: "black", afterWhite: 1 },
+      { name: "D4", frequency: 293.66, key: "s", type: "white" },
+      { name: "D#4", frequency: 311.13, key: "e", type: "black", afterWhite: 2 },
+      { name: "E4", frequency: 329.63, key: "d", type: "white" },
+      { name: "F4", frequency: 349.23, key: "f", type: "white" },
+      { name: "F#4", frequency: 369.99, key: "t", type: "black", afterWhite: 4 },
+      { name: "G4", frequency: 392.00, key: "g", type: "white" },
+      { name: "G#4", frequency: 415.30, key: "y", type: "black", afterWhite: 5 },
+      { name: "A4", frequency: 440.00, key: "h", type: "white" },
+      { name: "A#4", frequency: 466.16, key: "u", type: "black", afterWhite: 6 },
+      { name: "B4", frequency: 493.88, key: "j", type: "white" },
+      { name: "C5", frequency: 523.25, key: "k", type: "white" },
+      { name: "C#5", frequency: 554.37, key: "o", type: "black", afterWhite: 8 },
+      { name: "D5", frequency: 587.33, key: "l", type: "white" },
+      { name: "D#5", frequency: 622.25, key: ";", type: "black", afterWhite: 9 },
+      { name: "E5", frequency: 659.25, key: "'", type: "white" },
+      { name: "F5", frequency: 698.46, key: "z", type: "white" },
+      { name: "F#5", frequency: 739.99, key: "x", type: "black", afterWhite: 11 },
+      { name: "G5", frequency: 783.99, key: "c", type: "white" },
+      { name: "G#5", frequency: 830.61, key: "v", type: "black", afterWhite: 12 },
+      { name: "A5", frequency: 880.00, key: "b", type: "white" },
+      { name: "A#5", frequency: 932.33, key: "n", type: "black", afterWhite: 13 },
+      { name: "B5", frequency: 987.77, key: "m", type: "white" },
+      { name: "C6", frequency: 1046.50, key: ",", type: "white" }
+    ];
+
+    const STORAGE_KEY = "offline-piano-composer-v1";
+    const piano = document.querySelector("#piano");
+    const notesArea = document.querySelector("#notesArea");
+    const statusText = document.querySelector("#statusText");
+    const compositionSummary = document.querySelector("#compositionSummary");
+    const recordDot = document.querySelector("#recordDot");
+    const waveformInput = document.querySelector("#waveform");
+    const volumeInput = document.querySelector("#volume");
+    const volumeValue = document.querySelector("#volumeValue");
+    const attackInput = document.querySelector("#attack");
+    const attackValue = document.querySelector("#attackValue");
+    const releaseInput = document.querySelector("#release");
+    const releaseValue = document.querySelector("#releaseValue");
+    const defaultDurationInput = document.querySelector("#defaultDuration");
+    const tempoInput = document.querySelector("#tempo");
+    const recordBtn = document.querySelector("#recordBtn");
+    const playBtn = document.querySelector("#playBtn");
+    const stopBtn = document.querySelector("#stopBtn");
+    const addNoteBtn = document.querySelector("#addNoteBtn");
+    const demoBtn = document.querySelector("#demoBtn");
+    const clearBtn = document.querySelector("#clearBtn");
+    const quantizeBtn = document.querySelector("#quantizeBtn");
+    const sortBtn = document.querySelector("#sortBtn");
+    const saveBtn = document.querySelector("#saveBtn");
+    const loadBtn = document.querySelector("#loadBtn");
+    const downloadJsonBtn = document.querySelector("#downloadJsonBtn");
+    const downloadWavBtn = document.querySelector("#downloadWavBtn");
+    const importJsonBtn = document.querySelector("#importJsonBtn");
+    const copyJsonBtn = document.querySelector("#copyJsonBtn");
+    const jsonInput = document.querySelector("#jsonInput");
+
+    let audioContext;
+    let composition = [];
+    let isRecording = false;
+    let isPlaying = false;
+    let recordingStartedAt = 0;
+    let playTimeouts = [];
+    let playbackVoices = [];
+    const activeVoices = new Map();
+    const pressedKeys = new Set();
+
+    function getAudioContext() {
+      if (!audioContext) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        audioContext = new AudioContextClass();
+      }
+
+      if (audioContext.state === "suspended") {
+        audioContext.resume();
+      }
+
+      return audioContext;
+    }
+
+    function getSettings() {
+      return {
+        waveform: waveformInput.value,
+        volume: Number(volumeInput.value) / 100,
+        attack: Number(attackInput.value),
+        release: Number(releaseInput.value),
+        tempo: Number(tempoInput.value) || 100
+      };
+    }
+
+    function beatToSeconds(beats) {
+      return (60 / getSettings().tempo) * beats;
+    }
+
+    function secondsToBeat(seconds) {
+      return seconds / (60 / getSettings().tempo);
+    }
+
+    function findNote(name) {
+      return NOTES.find((note) => note.name === name) || NOTES[0];
+    }
+
+    function makeId() {
+      if (window.crypto && window.crypto.randomUUID) {
+        return window.crypto.randomUUID();
+      }
+
+      return `note-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+
+    function formatNumber(value, places = 2) {
+      return Number(value).toFixed(places).replace(/\.?0+$/, "");
+    }
+
+    function setStatus(message) {
+      statusText.textContent = message;
+    }
+
+    function createVoice(note, startTime, durationSeconds, context, destination, settings) {
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+      const now = startTime;
+      const stopTime = now + durationSeconds;
+      const releaseEnd = stopTime + settings.release;
+
+      oscillator.type = settings.waveform;
+      oscillator.frequency.setValueAtTime(note.frequency, now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(Math.max(settings.volume, 0.0001), now + Math.max(settings.attack, 0.001));
+      gain.gain.setValueAtTime(Math.max(settings.volume, 0.0001), stopTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, releaseEnd);
+      oscillator.connect(gain);
+      gain.connect(destination);
+      oscillator.start(now);
+      oscillator.stop(releaseEnd + 0.02);
+
+      return { oscillator, gain };
+    }
+
+    function playNote(noteName, durationSeconds = 0.6) {
+      const context = getAudioContext();
+      const settings = getSettings();
+      const note = findNote(noteName);
+      createVoice(note, context.currentTime, durationSeconds, context, context.destination, settings);
+      flashKey(noteName, durationSeconds * 1000);
+    }
+
+    function startHeldNote(noteName) {
+      const note = findNote(noteName);
+      const context = getAudioContext();
+      const settings = getSettings();
+      const oscillator = context.createOscillator();
+      const gain = context.createGain();
+
+      oscillator.type = settings.waveform;
+      oscillator.frequency.setValueAtTime(note.frequency, context.currentTime);
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(Math.max(settings.volume, 0.0001), context.currentTime + Math.max(settings.attack, 0.001));
+      oscillator.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+
+      activeVoices.set(noteName, {
+        oscillator,
+        gain,
+        startedAt: performance.now(),
+        recordingStartBeat: isRecording ? secondsToBeat((performance.now() - recordingStartedAt) / 1000) : 0
+      });
+
+      setKeyActive(noteName, true);
+    }
+
+    function stopHeldNote(noteName) {
+      const voice = activeVoices.get(noteName);
+      if (!voice) {
+        return;
+      }
+
+      const context = getAudioContext();
+      const release = getSettings().release;
+      const stopAt = context.currentTime + release;
+      voice.gain.gain.cancelScheduledValues(context.currentTime);
+      voice.gain.gain.setValueAtTime(Math.max(voice.gain.gain.value, 0.0001), context.currentTime);
+      voice.gain.gain.exponentialRampToValueAtTime(0.0001, stopAt);
+      voice.oscillator.stop(stopAt + 0.03);
+
+      if (isRecording) {
+        const heldSeconds = Math.max((performance.now() - voice.startedAt) / 1000, 0.08);
+        composition.push({
+          id: makeId(),
+          note: noteName,
+          start: Number(formatNumber(voice.recordingStartBeat)),
+          duration: Number(formatNumber(Math.max(secondsToBeat(heldSeconds), 0.25))),
+          velocity: Number(volumeInput.value)
+        });
+        sortComposition();
+        renderEditor();
+        saveDraftSilently();
+      }
+
+      activeVoices.delete(noteName);
+      setKeyActive(noteName, false);
+    }
+
+    function setKeyActive(noteName, active) {
+      const key = piano.querySelector(`[data-note="${noteName}"]`);
+      if (key) {
+        key.classList.toggle("active", active);
+      }
+    }
+
+    function flashKey(noteName, milliseconds) {
+      setKeyActive(noteName, true);
+      window.setTimeout(() => setKeyActive(noteName, false), milliseconds);
+    }
+
+    function buildPiano() {
+      const whiteKeys = document.createElement("div");
+      whiteKeys.className = "white-keys";
+
+      NOTES.filter((note) => note.type === "white").forEach((note) => {
+        const key = document.createElement("button");
+        key.type = "button";
+        key.className = "key white";
+        key.dataset.note = note.name;
+        key.innerHTML = `${note.name}<small>${note.key.toUpperCase()}</small>`;
+        whiteKeys.appendChild(key);
+      });
+
+      piano.appendChild(whiteKeys);
+
+      const whiteCount = NOTES.filter((note) => note.type === "white").length;
+      NOTES.filter((note) => note.type === "black").forEach((note) => {
+        const key = document.createElement("button");
+        key.type = "button";
+        key.className = "key black";
+        key.dataset.note = note.name;
+        key.style.left = `${(note.afterWhite / whiteCount) * 100}%`;
+        key.innerHTML = `${note.name}<small>${note.key.toUpperCase()}</small>`;
+        piano.appendChild(key);
+      });
+    }
+
+    function handleKeyPointerDown(event) {
+      const key = event.target.closest(".key");
+      if (!key || activeVoices.has(key.dataset.note)) {
+        return;
+      }
+
+      key.setPointerCapture(event.pointerId);
+      startHeldNote(key.dataset.note);
+    }
+
+    function handleKeyPointerUp(event) {
+      const key = event.target.closest(".key");
+      if (key) {
+        stopHeldNote(key.dataset.note);
+      }
+    }
+
+    function addNote(noteName = "C4", start = getNextStartBeat()) {
+      composition.push({
+        id: makeId(),
+        note: noteName,
+        start: Number(formatNumber(start)),
+        duration: Number(defaultDurationInput.value),
+        velocity: Number(volumeInput.value)
+      });
+      sortComposition();
+      renderEditor();
+      saveDraftSilently();
+    }
+
+    function getNextStartBeat() {
+      if (composition.length === 0) {
+        return 0;
+      }
+
+      return Math.max(...composition.map((event) => Number(event.start) + Number(event.duration)));
+    }
+
+    function sortComposition() {
+      composition.sort((a, b) => Number(a.start) - Number(b.start) || NOTES.findIndex((note) => note.name === a.note) - NOTES.findIndex((note) => note.name === b.note));
+    }
+
+    function renderEditor() {
+      compositionSummary.textContent = `${composition.length} ${composition.length === 1 ? "note" : "notes"}`;
+
+      if (composition.length === 0) {
+        notesArea.innerHTML = '<div class="empty-state">No notes yet. Play while recording, add notes manually, or load the demo melody.</div>';
+        return;
+      }
+
+      const rows = composition.map((event, index) => `
+        <tr data-id="${event.id}">
+          <td>${index + 1}</td>
+          <td>
+            <select data-field="note" aria-label="Note for row ${index + 1}">
+              ${NOTES.map((note) => `<option value="${note.name}" ${note.name === event.note ? "selected" : ""}>${note.name}</option>`).join("")}
+            </select>
+          </td>
+          <td><input data-field="start" aria-label="Start beat for row ${index + 1}" type="number" min="0" step="0.25" value="${formatNumber(event.start)}"></td>
+          <td><input data-field="duration" aria-label="Duration beats for row ${index + 1}" type="number" min="0.05" step="0.25" value="${formatNumber(event.duration)}"></td>
+          <td><input data-field="velocity" aria-label="Volume for row ${index + 1}" type="number" min="1" max="100" step="1" value="${event.velocity}"></td>
+          <td>
+            <button type="button" data-action="preview">Preview</button>
+            <button type="button" data-action="duplicate">Duplicate</button>
+            <button type="button" data-action="delete" class="danger">Delete</button>
+          </td>
+        </tr>
+      `).join("");
+
+      notesArea.innerHTML = `
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Note</th>
+                <th>Start beat</th>
+                <th>Length beats</th>
+                <th>Volume</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }
+
+    function updateEventFromInput(input) {
+      const row = input.closest("tr");
+      const event = composition.find((item) => item.id === row.dataset.id);
+      if (!event) {
+        return;
+      }
+
+      const field = input.dataset.field;
+      if (field === "note") {
+        event.note = input.value;
+      } else if (field === "velocity") {
+        event.velocity = Math.max(1, Math.min(100, Number(input.value) || 1));
+        input.value = event.velocity;
+      } else {
+        event[field] = Math.max(field === "start" ? 0 : 0.05, Number(input.value) || 0);
+        input.value = formatNumber(event[field]);
+      }
+
+      sortComposition();
+      renderEditor();
+      saveDraftSilently();
+    }
+
+    function handleEditorClick(event) {
+      const button = event.target.closest("button[data-action]");
+      if (!button) {
+        return;
+      }
+
+      const row = button.closest("tr");
+      const item = composition.find((noteEvent) => noteEvent.id === row.dataset.id);
+      if (!item) {
+        return;
+      }
+
+      if (button.dataset.action === "delete") {
+        composition = composition.filter((noteEvent) => noteEvent.id !== item.id);
+      }
+
+      if (button.dataset.action === "duplicate") {
+        composition.push({
+          ...item,
+          id: makeId(),
+          start: Number(formatNumber(Number(item.start) + Number(item.duration)))
+        });
+      }
+
+      if (button.dataset.action === "preview") {
+        playNote(item.note, beatToSeconds(item.duration));
+      }
+
+      sortComposition();
+      renderEditor();
+      saveDraftSilently();
+    }
+
+    function toggleRecording() {
+      if (!isRecording) {
+        stopPlayback();
+        isRecording = true;
+        recordingStartedAt = performance.now();
+        recordBtn.textContent = "Stop recording";
+        recordDot.classList.add("live");
+        setStatus("Recording");
+        return;
+      }
+
+      [...activeVoices.keys()].forEach(stopHeldNote);
+      isRecording = false;
+      recordBtn.textContent = "Start recording";
+      recordDot.classList.remove("live");
+      setStatus("Recording stopped");
+      renderEditor();
+    }
+
+    function playComposition() {
+      if (composition.length === 0) {
+        setStatus("Add notes before playback");
+        return;
+      }
+
+      stopPlayback();
+      const context = getAudioContext();
+      const settings = getSettings();
+      isPlaying = true;
+      playBtn.disabled = true;
+      stopBtn.disabled = false;
+      setStatus("Playing");
+
+      const endBeat = Math.max(...composition.map((event) => Number(event.start) + Number(event.duration)));
+      composition.forEach((event) => {
+        const startDelay = beatToSeconds(Number(event.start));
+        const durationSeconds = beatToSeconds(Number(event.duration));
+        const note = findNote(event.note);
+        const eventSettings = {
+          ...settings,
+          volume: Math.max(0.01, Math.min(1, Number(event.velocity) / 100))
+        };
+        playbackVoices.push(createVoice(note, context.currentTime + startDelay, durationSeconds, context, context.destination, eventSettings));
+
+        const flashTimeout = window.setTimeout(() => {
+          flashKey(event.note, Math.max(120, durationSeconds * 1000));
+        }, startDelay * 1000);
+        playTimeouts.push(flashTimeout);
+      });
+
+      const finishTimeout = window.setTimeout(stopPlayback, beatToSeconds(endBeat) * 1000 + (settings.release * 1000) + 120);
+      playTimeouts.push(finishTimeout);
+    }
+
+    function stopPlayback() {
+      playTimeouts.forEach(window.clearTimeout);
+      playTimeouts = [];
+      playbackVoices.forEach((voice) => {
+        try {
+          voice.oscillator.stop();
+        } catch {
+          // The oscillator may have already ended naturally.
+        }
+        voice.oscillator.disconnect();
+        voice.gain.disconnect();
+      });
+      playbackVoices = [];
+      isPlaying = false;
+      playBtn.disabled = false;
+      stopBtn.disabled = true;
+      NOTES.forEach((note) => setKeyActive(note.name, false));
+      if (!isRecording) {
+        setStatus("Ready");
+      }
+    }
+
+    function clearComposition() {
+      if (composition.length === 0 || window.confirm("Clear all notes from this composition?")) {
+        composition = [];
+        renderEditor();
+        saveDraftSilently();
+        setStatus("Composition cleared");
+      }
+    }
+
+    function quantizeStarts() {
+      composition = composition.map((event) => ({
+        ...event,
+        start: Number(formatNumber(Math.round(Number(event.start) * 4) / 4)),
+        duration: Number(formatNumber(Math.max(0.25, Math.round(Number(event.duration) * 4) / 4)))
+      }));
+      sortComposition();
+      renderEditor();
+      saveDraftSilently();
+      setStatus("Notes quantized");
+    }
+
+    function loadDemo() {
+      const melody = [
+        ["C4", 0, 1], ["E4", 1, 1], ["G4", 2, 1], ["C5", 3, 1.5],
+        ["G4", 4.75, 0.5], ["E4", 5.25, 0.5], ["D4", 5.75, 0.5], ["C4", 6.25, 1.5],
+        ["E4", 8, 0.75], ["F4", 8.75, 0.75], ["G4", 9.5, 1], ["A4", 10.5, 1],
+        ["G4", 11.5, 1.5], ["C5", 13, 1], ["B4", 14, 1], ["C5", 15, 2]
+      ];
+      composition = melody.map(([note, start, duration]) => ({
+        id: makeId(),
+        note,
+        start,
+        duration,
+        velocity: 74
+      }));
+      renderEditor();
+      saveDraftSilently();
+      setStatus("Demo melody loaded");
+    }
+
+    function getProjectData() {
+      return {
+        name: "Offline Piano Composition",
+        version: 1,
+        settings: getSettings(),
+        notes: composition.map((event) => ({
+          note: event.note,
+          start: Number(event.start),
+          duration: Number(event.duration),
+          velocity: Number(event.velocity)
+        }))
+      };
+    }
+
+    function saveDraftSilently() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(getProjectData()));
+    }
+
+    function saveLocally() {
+      saveDraftSilently();
+      setStatus("Saved in this browser");
+    }
+
+    function loadProjectData(data) {
+      if (!data || !Array.isArray(data.notes)) {
+        throw new Error("The JSON does not include a notes array.");
+      }
+
+      if (data.settings) {
+        waveformInput.value = data.settings.waveform || waveformInput.value;
+        volumeInput.value = Math.round((data.settings.volume ?? 0.7) * 100);
+        attackInput.value = data.settings.attack ?? attackInput.value;
+        releaseInput.value = data.settings.release ?? releaseInput.value;
+        tempoInput.value = data.settings.tempo || tempoInput.value;
+        syncControlLabels();
+      }
+
+      composition = data.notes.map((event) => ({
+        id: makeId(),
+        note: findNote(event.note).name,
+        start: Math.max(0, Number(event.start) || 0),
+        duration: Math.max(0.05, Number(event.duration) || 1),
+        velocity: Math.max(1, Math.min(100, Number(event.velocity) || 70))
+      }));
+      sortComposition();
+      renderEditor();
+      saveDraftSilently();
+    }
+
+    function loadSaved() {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        setStatus("No saved composition found");
+        return;
+      }
+
+      try {
+        loadProjectData(JSON.parse(saved));
+        setStatus("Saved composition loaded");
+      } catch (error) {
+        setStatus(error.message);
+      }
+    }
+
+    function downloadFile(filename, contents, type) {
+      const blob = new Blob([contents], { type });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadJson() {
+      downloadFile("offline-piano-composition.json", JSON.stringify(getProjectData(), null, 2), "application/json");
+      setStatus("JSON downloaded");
+    }
+
+    function importJson() {
+      try {
+        loadProjectData(JSON.parse(jsonInput.value));
+        setStatus("JSON imported");
+      } catch (error) {
+        setStatus(`Import failed: ${error.message}`);
+      }
+    }
+
+    async function copyJson() {
+      const json = JSON.stringify(getProjectData(), null, 2);
+      jsonInput.value = json;
+
+      try {
+        await navigator.clipboard.writeText(json);
+        setStatus("JSON copied");
+      } catch {
+        setStatus("JSON placed in the text box");
+      }
+    }
+
+    function encodeWav(samples, sampleRate) {
+      const bytesPerSample = 2;
+      const blockAlign = bytesPerSample;
+      const buffer = new ArrayBuffer(44 + samples.length * bytesPerSample);
+      const view = new DataView(buffer);
+
+      function writeString(offset, value) {
+        for (let index = 0; index < value.length; index += 1) {
+          view.setUint8(offset + index, value.charCodeAt(index));
+        }
+      }
+
+      writeString(0, "RIFF");
+      view.setUint32(4, 36 + samples.length * bytesPerSample, true);
+      writeString(8, "WAVE");
+      writeString(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, 16, true);
+      writeString(36, "data");
+      view.setUint32(40, samples.length * bytesPerSample, true);
+
+      let offset = 44;
+      for (let index = 0; index < samples.length; index += 1, offset += 2) {
+        const sample = Math.max(-1, Math.min(1, samples[index]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+      }
+
+      return buffer;
+    }
+
+    async function downloadWav() {
+      if (!window.OfflineAudioContext && !window.webkitOfflineAudioContext) {
+        setStatus("WAV export is not supported in this browser");
+        return;
+      }
+
+      if (composition.length === 0) {
+        setStatus("Add notes before WAV export");
+        return;
+      }
+
+      const settings = getSettings();
+      const sampleRate = 44100;
+      const endBeat = Math.max(...composition.map((event) => Number(event.start) + Number(event.duration)));
+      const totalSeconds = beatToSeconds(endBeat) + settings.release + 0.5;
+      const OfflineContext = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+      const offlineContext = new OfflineContext(1, Math.ceil(totalSeconds * sampleRate), sampleRate);
+
+      composition.forEach((event) => {
+        const eventSettings = {
+          ...settings,
+          volume: Math.max(0.01, Math.min(1, Number(event.velocity) / 100))
+        };
+        createVoice(findNote(event.note), beatToSeconds(Number(event.start)), beatToSeconds(Number(event.duration)), offlineContext, offlineContext.destination, eventSettings);
+      });
+
+      setStatus("Rendering WAV...");
+      const rendered = await offlineContext.startRendering();
+      const wavBuffer = encodeWav(rendered.getChannelData(0), sampleRate);
+      downloadFile("offline-piano-composition.wav", wavBuffer, "audio/wav");
+      setStatus("WAV downloaded");
+    }
+
+    function syncControlLabels() {
+      volumeValue.textContent = `${volumeInput.value}%`;
+      attackValue.textContent = `${formatNumber(attackInput.value)}s`;
+      releaseValue.textContent = `${formatNumber(releaseInput.value)}s`;
+    }
+
+    function handleKeyboardDown(event) {
+      if (event.repeat || event.target.matches("input, textarea, select")) {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const note = NOTES.find((item) => item.key === key);
+      if (!note || pressedKeys.has(key)) {
+        return;
+      }
+
+      event.preventDefault();
+      pressedKeys.add(key);
+      startHeldNote(note.name);
+    }
+
+    function handleKeyboardUp(event) {
+      const key = event.key.toLowerCase();
+      const note = NOTES.find((item) => item.key === key);
+      if (!note) {
+        return;
+      }
+
+      event.preventDefault();
+      pressedKeys.delete(key);
+      stopHeldNote(note.name);
+    }
+
+    function bindEvents() {
+      piano.addEventListener("pointerdown", handleKeyPointerDown);
+      piano.addEventListener("pointerup", handleKeyPointerUp);
+      piano.addEventListener("pointercancel", handleKeyPointerUp);
+      piano.addEventListener("pointerleave", handleKeyPointerUp);
+      document.addEventListener("keydown", handleKeyboardDown);
+      document.addEventListener("keyup", handleKeyboardUp);
+
+      [volumeInput, attackInput, releaseInput].forEach((input) => {
+        input.addEventListener("input", () => {
+          syncControlLabels();
+          saveDraftSilently();
+        });
+      });
+
+      [waveformInput, tempoInput].forEach((input) => {
+        input.addEventListener("change", saveDraftSilently);
+      });
+
+      recordBtn.addEventListener("click", toggleRecording);
+      playBtn.addEventListener("click", playComposition);
+      stopBtn.addEventListener("click", stopPlayback);
+      addNoteBtn.addEventListener("click", () => addNote());
+      demoBtn.addEventListener("click", loadDemo);
+      clearBtn.addEventListener("click", clearComposition);
+      quantizeBtn.addEventListener("click", quantizeStarts);
+      sortBtn.addEventListener("click", () => {
+        sortComposition();
+        renderEditor();
+        setStatus("Notes sorted");
+      });
+      saveBtn.addEventListener("click", saveLocally);
+      loadBtn.addEventListener("click", loadSaved);
+      downloadJsonBtn.addEventListener("click", downloadJson);
+      downloadWavBtn.addEventListener("click", () => {
+        downloadWav().catch((error) => setStatus(`WAV export failed: ${error.message}`));
+      });
+      importJsonBtn.addEventListener("click", importJson);
+      copyJsonBtn.addEventListener("click", copyJson);
+      notesArea.addEventListener("change", (event) => {
+        if (event.target.matches("[data-field]")) {
+          updateEventFromInput(event.target);
+        }
+      });
+      notesArea.addEventListener("click", handleEditorClick);
+    }
+
+    function init() {
+      buildPiano();
+      bindEvents();
+      syncControlLabels();
+      renderEditor();
+
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        try {
+          loadProjectData(JSON.parse(saved));
+          setStatus("Loaded saved draft");
+        } catch {
+          setStatus("Ready");
+        }
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
